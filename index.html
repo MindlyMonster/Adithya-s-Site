@@ -2545,58 +2545,74 @@ var GAS_URL = "https://script.google.com/macros/s/AKfycbw24IQOhGAn-KLFUcpimPc1AR
 var _formType = "analysis";
 function setFormType(t){ _formType=t; }
 
-async function submitForm(e){
-  e.preventDefault();
-  var btn=document.getElementById("form-submit-btn");
-  var bTxt=btn?btn.querySelector(".btn-text"):null;
-  var bLdr=btn?btn.querySelector(".btn-loader"):null;
-  if(btn) btn.disabled=true;
-  if(bTxt) bTxt.style.display="none";
-  if(bLdr) bLdr.style.display="flex";
+async function submitForm(e) {
+  if (e && typeof e.preventDefault === 'function') {
+    e.preventDefault();
+  } else if (window.event) {
+    window.event.returnValue = false;
+  }
 
-  var payload={
-    action:    "submit",
-    type:      _formType,
-    timestamp: new Date().toLocaleString("en-IN"),
-    name:      (document.getElementById("f-name")||{value:""}).value.trim(),
-    business:  (document.getElementById("f-business")||{value:""}).value.trim(),
-    industry:  (document.getElementById("f-industry")||{value:""}).value,
-    email:     (document.getElementById("f-email")||{value:""}).value.trim(),
-    phone:     (document.getElementById("f-phone")||{value:""}).value.trim(),
-    website:   (document.getElementById("f-website")||{value:""}).value.trim(),
-    challenge: (document.getElementById("f-challenge")||{value:""}).value.trim(),
-    status:    "New"
-  };
+  var btn = document.getElementById("form-submit-btn");
+  var bTxt = btn ? btn.querySelector(".btn-text") : null;
+  var bLdr = btn ? btn.querySelector(".btn-loader") : null;
+  
+  if (btn) btn.disabled = true;
+  if (bTxt) bTxt.style.display = "none";
+  if (bLdr) bLdr.style.display = "flex";
 
-  // Convert the payload object into URL parameters to prevent CORS blocks in external frames
-  var formBody = Object.keys(payload).map(function(key) {
-    return encodeURIComponent(key) + '=' + encodeURIComponent(payload[key]);
-  }).join('&');
-
-  /* Send to Google Sheets via GAS (URL-encoded format handles external frames seamlessly) */
   try {
-    fetch(GAS_URL, {
+    var valName = document.getElementById('f-name') ? document.getElementById('f-name').value.trim() : "N/A";
+    var valBiz = document.getElementById('f-business') ? document.getElementById('f-business').value.trim() : "N/A";
+    var valInd = document.getElementById('f-industry') ? document.getElementById('f-industry').value : "N/A";
+    var valEmail = document.getElementById('f-email') ? document.getElementById('f-email').value.trim() : "N/A";
+    var valPhone = document.getElementById('f-phone') ? document.getElementById('f-phone').value.trim() : "N/A";
+    var valWeb = document.getElementById('f-website') ? document.getElementById('f-website').value.trim() : "";
+    var valChal = document.getElementById('f-challenge') ? document.getElementById('f-challenge').value.trim() : "N/A";
+
+    var payload = {
+      timestamp: new Date().toLocaleString("en-IN"),
+      type: _formType || "Free Business Analysis Request",
+      name: valName,
+      business: valBiz,
+      industry: valInd,
+      email: valEmail,
+      phone: valPhone,
+      website: valWeb,
+      challenge: valChal,
+      status: "New"
+    };
+
+    var formBody = Object.keys(payload).map(function(key) {
+      return encodeURIComponent(key) + '=' + encodeURIComponent(payload[key]);
+    }).join('&');
+
+    await fetch(GAS_URL, {
       method: "POST",
-      mode: "no-cors", 
+      mode: "no-cors",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded"
       },
       body: formBody
     });
-  } catch(err) { 
-    console.error("Data tracking failure:", err); 
-  }
-  
-  /* Always save locally too */
-  saveLead(payload);
-  updateLeadCount();
-  _formType="analysis";
 
-  /* Show success */
-  var form=document.getElementById("lead-form");
-  var suc=document.getElementById("form-success-inline");
-  if(form) form.style.display="none";
-  if(suc)  suc.classList.add("show");
+    saveLead(payload);
+    updateLeadCount();
+    _formType = "analysis";
+
+    var form = document.getElementById("lead-form");
+    var suc = document.getElementById("form-success-inline");
+    if (form) form.style.display = "none";
+    if (suc) suc.classList.add("show");
+
+  } catch (err) {
+    console.error("Tracking error:", err);
+    alert("Submission error. Please check your connection and try again.");
+    if (btn) {
+      btn.disabled = false;
+      if (bTxt) bTxt.style.display = "";
+      if (bLdr) bLdr.style.display = "none";
+    }
+  }
 }
 
 function resetAnalysisForm(){
