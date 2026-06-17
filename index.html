@@ -2539,7 +2539,6 @@ function updateLeadCount(){
    GOOGLE APPS SCRIPT BACKEND
 ══════════════════════════════════════════════════════ */
 var GAS_URL = "https://script.google.com/macros/s/AKfycbw24IQOhGAn-KLFUcpimPc1ARyLA3KtjxyqeIQVftoTBXPsHcym_e84o0W1wLC0GoGTZw/exec";
-
 /* ══════════════════════════════════════════════════════
    FORM SUBMIT — sends to GAS + saves locally
 ══════════════════════════════════════════════════════ */
@@ -2569,16 +2568,25 @@ async function submitForm(e){
     status:    "New"
   };
 
-  /* Send to Google Sheets via GAS (no-cors — fire and forget) */
-  try{
-    fetch(GAS_URL,{
-      method:"POST",
-      mode:"no-cors",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify(payload)
-    });
-  }catch(err){ /* silent fail — local backup handles it */ }
+  // Convert the payload object into URL parameters to prevent CORS blocks in external frames
+  var formBody = Object.keys(payload).map(function(key) {
+    return encodeURIComponent(key) + '=' + encodeURIComponent(payload[key]);
+  }).join('&');
 
+  /* Send to Google Sheets via GAS (URL-encoded format handles external frames seamlessly) */
+  try {
+    fetch(GAS_URL, {
+      method: "POST",
+      mode: "no-cors", 
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: formBody
+    });
+  } catch(err) { 
+    console.error("Data tracking failure:", err); 
+  }
+  
   /* Always save locally too */
   saveLead(payload);
   updateLeadCount();
